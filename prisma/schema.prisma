@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(cuid())
+  nickname    String   @unique
+  password    String
+  avatarUrl   String?
+  avatarColor String
+  createdAt   DateTime @default(now())
+
+  memberships   GroupMembership[]
+  availability  Availability[]
+  createdGroups Group[]          @relation("GroupCreator")
+  createdEvents Event[]          @relation("EventCreator")
+}
+
+model Group {
+  id        String   @id @default(cuid())
+  name      String
+  joinCode  String   @unique
+  createdBy String
+  createdAt DateTime @default(now())
+
+  creator User              @relation("GroupCreator", fields: [createdBy], references: [id])
+  members GroupMembership[]
+  events  Event[]
+}
+
+model GroupMembership {
+  id      String @id @default(cuid())
+  userId  String
+  groupId String
+  role    String @default("member")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+model Event {
+  id             String    @id @default(cuid())
+  groupId        String
+  name           String
+  description    String?
+  dateRangeStart DateTime
+  dateRangeEnd   DateTime
+  votingDeadline DateTime?
+  status         String    @default("voting")
+  finalDate      DateTime?
+  createdBy      String
+  createdAt      DateTime  @default(now())
+
+  group        Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator      User           @relation("EventCreator", fields: [createdBy], references: [id])
+  availability Availability[]
+}
+
+model Availability {
+  id          String  @id @default(cuid())
+  eventId     String
+  userId      String
+  date        DateTime
+  isAvailable Boolean @default(true)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId, date])
+}
